@@ -132,8 +132,11 @@ impl World {
                                                             .mult(1.0/(current_m + other_m));
                     let other_final_v = current_velocity.sub(&other_velocity).add(&current_final_v);
 
-                    self.objects[i].set_velocity(&current_final_v);
-                    self.objects[j].set_velocity(&other_final_v);
+                    let new_incident_v = current_final_v.proj_on(&collision_direction).mult(-1.0)
+                                                    .add(&current_final_v.reject_on(&collision_direction));
+
+                    self.objects[i].set_velocity(&new_incident_v);
+                    self.objects[j].set_velocity(&collision_direction.unit().mult(other_final_v.mag()));
                 }
             }
         }
