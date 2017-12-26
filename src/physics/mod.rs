@@ -16,6 +16,9 @@ pub trait Object {
     fn get_velocity(&self) -> Vec2D;
     fn set_velocity(&mut self, velocity: &Vec2D);
 
+    fn get_friction(&self) -> f64;
+    fn set_friction(&mut self, friction_k: f64);
+
     fn as_any(&self) -> &Any;
 }
 
@@ -122,22 +125,41 @@ impl World {
                     let current_m = self.objects[i].get_mass();
                     let other_m = self.objects[j].get_mass();
 
-                    let mut current_velocity = self.objects[i].get_velocity();
-                    let mut other_velocity = self.objects[j].get_velocity();
+                    let current_velocity = self.objects[i].get_velocity();
+                    let other_velocity = self.objects[j].get_velocity();
 
+                    //Velocity of current object after elastic collision
                     let current_final_v = current_velocity.mult(current_m)
                                                             .add(&other_velocity.mult(other_m))
                                                             .sub(&current_velocity.mult(other_m))
                                                             .add(&other_velocity.mult(other_m))
                                                             .mult(1.0/(current_m + other_m));
+
+                    //Velocity of second object after elastic collision
                     let other_final_v = current_velocity.sub(&other_velocity).add(&current_final_v);
 
+                    //Reflect velocity over collision direction
                     let new_incident_v = current_final_v.proj_on(&collision_direction).mult(-1.0)
                                                     .add(&current_final_v.reject_on(&collision_direction));
 
                     self.objects[i].set_velocity(&new_incident_v);
                     self.objects[j].set_velocity(&collision_direction.unit().mult(other_final_v.mag()));
                 }
+            }
+        }
+
+        //Apply Frictional Force
+        for obj in self.objects.iter_mut() {
+            //Find magnitude of frictional force and make friction vector
+            let friction_k = obj.get_mass() * self.gravity.abs() * obj.get_friction();
+            let friction_force = obj.get_velocity().unit().mult(friction_k * self.timestep);
+
+            //Makes sure that friction brings object to rest and not negative velocity
+            if friction_force.mag() < obj.get_velocity().mag() {
+                let new_velocity = obj.get_velocity().sub(&friction_force);
+                obj.set_velocity(&new_velocity);
+            } else {
+                obj.set_velocity(&Vec2D::new(0.0,0.0));
             }
         }
 

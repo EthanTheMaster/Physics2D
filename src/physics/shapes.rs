@@ -10,15 +10,17 @@ pub struct Circle {
     pub center: Vec2D,
     pub radius: f64,
     pub color: [f32; 4],
+    pub friction: f64,
 }
 
 impl Circle {
     pub fn new(mass: f64, center: Vec2D, radius: f64) -> Circle{
-        Circle{mass,
+        Circle{ mass,
                 velocity: Vec2D::new(0.0, 0.0),
                 center,
                 radius,
-                color: [0.0, 0.0, 0.0, 1.0]
+                color: [0.0, 0.0, 0.0, 1.0],
+                friction: 0.0
         }
     }
 }
@@ -46,6 +48,14 @@ impl Object for Circle{
 
     fn set_velocity(&mut self, velocity: &Vec2D) {
         self.velocity = velocity.clone();
+    }
+
+    fn get_friction(&self) -> f64 {
+        self.friction
+    }
+
+    fn set_friction(&mut self, friction_k: f64) {
+        self.friction = friction_k;
     }
 
     fn as_any(&self) -> &Any {
