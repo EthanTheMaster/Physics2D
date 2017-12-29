@@ -19,8 +19,9 @@ fn main() {
     c2.color = [0.0,1.0,0.0,1.0];
     c3.color = [0.0,0.0,1.0,1.0];
 
-    c1.set_velocity(&Vec2D::new(3.0,3.0));
+    c2.set_velocity(&Vec2D::new(-10.0,-10.0));
 //    c3.set_velocity(&Vec2D::new(-1.0,-1.0));
+    c1.set_static(true);
 
     c1.set_friction(0.001);
     c2.set_friction(0.001);

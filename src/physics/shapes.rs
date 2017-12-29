@@ -13,6 +13,7 @@ pub struct Circle {
     pub radius: f64,
     pub color: [f32; 4],
     pub friction: f64,
+    pub is_static: bool,
 }
 
 impl Circle {
@@ -22,7 +23,8 @@ impl Circle {
                 center,
                 radius,
                 color: [0.0, 0.0, 0.0, 1.0],
-                friction: 0.0
+                friction: 0.0,
+                is_static: false
         }
     }
 }
@@ -62,6 +64,14 @@ impl Object for Circle{
 
     fn as_any(&self) -> &Any {
         self
+    }
+
+    fn get_static(&self) -> bool {
+        self.is_static
+    }
+
+    fn set_static(&mut self, is_static: bool) {
+        self.is_static = is_static;
     }
 }
 

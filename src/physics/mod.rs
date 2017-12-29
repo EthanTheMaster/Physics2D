@@ -19,6 +19,9 @@ pub trait Object {
     fn get_friction(&self) -> f64;
     fn set_friction(&mut self, friction_k: f64);
 
+    fn get_static(&self) -> bool;
+    fn set_static(&mut self, is_static: bool);
+
     fn as_any(&self) -> &Any;
 }
 
@@ -111,30 +114,59 @@ impl World {
                     None => Vec2D::new(0.0, 0.0)
                 };
 
-                //Perform elastic collision
-                if has_collided {
-                    let current_m = self.objects[i].get_mass();
-                    let other_m = self.objects[j].get_mass();
+                //Check if colliding objects are fixed/static and perform appropriate collision
+                if !self.objects[i].get_static() && !self.objects[j].get_static() {
+                    //Perform elastic collision if non of the objects are static and have collided
+                    if has_collided {
+                        let current_m = self.objects[i].get_mass();
+                        let other_m = self.objects[j].get_mass();
 
-                    let current_velocity = self.objects[i].get_velocity();
-                    let other_velocity = self.objects[j].get_velocity();
+                        let current_velocity = self.objects[i].get_velocity();
+                        let other_velocity = self.objects[j].get_velocity();
 
-                    //Velocity of current object after elastic collision
-                    let current_final_v = current_velocity.mult(current_m)
-                                                            .add(&other_velocity.mult(other_m))
-                                                            .sub(&current_velocity.mult(other_m))
-                                                            .add(&other_velocity.mult(other_m))
-                                                            .mult(1.0/(current_m + other_m));
+                        //Velocity of current object after elastic collision
+                        let current_final_v = current_velocity.mult(current_m)
+                            .add(&other_velocity.mult(other_m))
+                            .sub(&current_velocity.mult(other_m))
+                            .add(&other_velocity.mult(other_m))
+                            .mult(1.0/(current_m + other_m));
 
-                    //Velocity of second object after elastic collision
-                    let other_final_v = current_velocity.sub(&other_velocity).add(&current_final_v);
+                        //Velocity of second object after elastic collision
+                        let other_final_v = current_velocity.sub(&other_velocity).add(&current_final_v);
 
-                    //Reflect velocity over collision direction
-                    let new_incident_v = current_final_v.proj_on(&collision_direction).mult(-1.0)
-                                                    .add(&current_final_v.reject_on(&collision_direction));
+                        //Reflect object at angle of incidence and change its velocity based on elastic collision
+                        let new_incident_v = current_velocity.proj_on(&collision_direction)
+                                                        .mult(-1.0)
+                                                        .add(&current_velocity.reject_on(&collision_direction))
+                                                        .unit().mult(current_final_v.mag());
 
-                    self.objects[i].set_velocity(&new_incident_v);
-                    self.objects[j].set_velocity(&collision_direction.unit().mult(other_final_v.mag()));
+                        self.objects[i].set_velocity(&new_incident_v);
+                        self.objects[j].set_velocity(&current_velocity.proj_on(&collision_direction).unit().mult(other_final_v.mag()));
+                    }
+                } else {
+                    if has_collided {
+                        //Make static objects have zero velocity
+                        //Make non-static objects reflect at angle of incidence
+                        if self.objects[i].get_static() {
+                            self.objects[i].set_velocity(&Vec2D::new(0.0, 0.0));
+                        } else {
+                            let current_velocity = self.objects[i].get_velocity();
+                            let new_velocity = current_velocity.proj_on(&collision_direction)
+                                                        .mult(-1.0)
+                                                        .add(&current_velocity.reject_on(&collision_direction));
+                            self.objects[i].set_velocity(&new_velocity);
+                        }
+
+                        if self.objects[j].get_static() {
+                            self.objects[j].set_velocity(&Vec2D::new(0.0, 0.0));
+                        } else {
+                            let current_velocity = self.objects[j].get_velocity();
+                            let new_velocity = current_velocity.proj_on(&collision_direction)
+                                .mult(-1.0)
+                                .add(&current_velocity.reject_on(&collision_direction));
+                            self.objects[j].set_velocity(&new_velocity);
+                        }
+                    }
                 }
             }
         }
