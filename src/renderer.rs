@@ -9,7 +9,7 @@ pub trait Renderable {
     fn render(&self, context: &Context, graphics: &mut G2d);
 }
 
-pub trait RenderableObject: Renderable + Object + Collidable<Circle> {}
+pub trait RenderableObject: Renderable + Object + Collidable {}
 
 impl Renderable for Circle {
     fn render(&self, context: &Context, graphics: &mut G2d) {

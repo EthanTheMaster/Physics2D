@@ -22,12 +22,12 @@ pub trait Object {
     fn as_any(&self) -> &Any;
 }
 
-pub trait Collidable<T: Object> {
+pub trait Collidable {
     //Returns whether two bodies has collided
-    fn has_collided(&self, other: &T) -> bool;
+    fn has_collided(&self, other: &RenderableObject) -> bool;
 
     //Returns vector describing direction of collision(self on other)
-    fn collision_direction(&self, other: &T) -> Option<Vec2D>;
+    fn collision_direction(&self, other: &RenderableObject) -> Option<Vec2D>;
 }
 
 #[derive(Debug)]
@@ -105,20 +105,11 @@ impl World {
         //Check for collisions and change trajectories
         for i in 0..self.objects.len() {
             for j in (i+1)..self.objects.len() {
-                let mut has_collided = false;
-                let mut collision_direction = Vec2D::new(0.0, 0.0);
-
-                {
-                    let current = self.objects[i].as_any().downcast_ref::<Circle>().unwrap();
-                    let other = self.objects[j].as_any().downcast_ref::<Circle>().unwrap();
-
-                    has_collided = current.has_collided(&other);
-
-                    collision_direction = match current.collision_direction(&other){
-                            Some(v) => v,
-                            None => Vec2D::new(0.0,0.0)
-                    };
-                }
+                let has_collided = self.objects[i].has_collided(&*self.objects[j]);
+                let collision_direction = match self.objects[i].collision_direction(&*self.objects[j]) {
+                    Some(v) => v,
+                    None => Vec2D::new(0.0, 0.0)
+                };
 
                 //Perform elastic collision
                 if has_collided {

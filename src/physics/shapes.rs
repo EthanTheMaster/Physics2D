@@ -2,6 +2,8 @@ use physics::Vec2D;
 use physics::Object;
 use physics::Collidable;
 
+use renderer::RenderableObject;
+
 use std::any::Any;
 
 pub struct Circle {
@@ -63,18 +65,28 @@ impl Object for Circle{
     }
 }
 
-impl Collidable<Circle> for Circle {
-    fn has_collided(&self, other: &Circle) -> bool {
-        self.center.sub(&other.center).mag() < (self.radius + other.radius)
+impl Collidable for Circle {
+    fn has_collided(&self, other: &RenderableObject) -> bool {
+        if other.as_any().is::<Circle>() {
+            let other = other.as_any().downcast_ref::<Circle>().unwrap();
+            return self.center.sub(&other.center).mag() < (self.radius + other.radius)
+        }
+
+        return false;
     }
 
-    fn collision_direction(&self, other: &Circle) -> Option<Vec2D> {
+    fn collision_direction(&self, other: &RenderableObject) -> Option<Vec2D> {
         if !self.has_collided(other) {
             return None;
         }
 
-        Some(
-            Vec2D::new(other.center.x - self.center.x, other.center.y - self.center.y)
-        )
+        if other.as_any().is::<Circle>() {
+            let other = other.as_any().downcast_ref::<Circle>().unwrap();
+            return Some(
+                        Vec2D::new(other.center.x - self.center.x, other.center.y - self.center.y)
+                    )
+        }
+
+        return None;
     }
 }
