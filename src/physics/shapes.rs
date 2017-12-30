@@ -162,8 +162,8 @@ impl Collidable for Circle {
             //Distance from center to start point
             let distance2 = line.start_point.sub(&self.center).mag();
             //Distance from center to line
-            let distance3 = line.end_point.sub(&line.start_point)
-                                    .reject_on(&line.end_point.sub(&self.center)).mag();
+            let distance3 = self.center.sub(&line.start_point)
+                                    .reject_on(&line.end_point.sub(&line.start_point)).mag();
             //Closest point on the line(not line segment) from the circle
             let closest_point = line.start_point.add(&self.center.sub(&line.start_point).proj_on(&line.end_point.sub(&line.start_point)));
 

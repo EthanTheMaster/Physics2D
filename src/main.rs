@@ -24,15 +24,15 @@ fn main() {
     c2.color = [0.0,1.0,0.0,1.0];
     c3.color = [0.0,0.0,1.0,1.0];
 
-    c2.set_velocity(&Vec2D::new(-4.0,-4.0));
+    c2.set_velocity(&Vec2D::new(-3.2,-3.2));
     l3.set_velocity(&Vec2D::new(0.0,-0.5));
 
     c1.set_static(true);
     l3.set_static(false);
 
     c1.set_friction(0.001);
-    c2.set_friction(0.001);
-    c3.set_friction(0.0);
+    c2.set_friction(0.0);
+    c3.set_friction(0.00005);
 
     let mut world = World::new(9.8, 1.0);
     world.add_object(c1);
