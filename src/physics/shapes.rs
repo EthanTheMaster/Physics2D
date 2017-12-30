@@ -155,6 +155,7 @@ impl Collidable for Circle {
             return self.center.sub(&other.center).mag() < (self.radius + other.radius)
         } else if other.as_any().is::<Line>() {
             let line: &Line = other.as_any().downcast_ref::<Line>().unwrap();
+            let line_len = line.end_point.sub(&line.start_point).mag();
 
             //Distance from center to end point
             let distance1 = line.end_point.sub(&self.center).mag();
@@ -163,11 +164,13 @@ impl Collidable for Circle {
             //Distance from center to line
             let distance3 = line.end_point.sub(&line.start_point)
                                     .reject_on(&line.end_point.sub(&self.center)).mag();
+            //Closest point on the line(not line segment) from the circle
+            let closest_point = line.start_point.add(&self.center.sub(&line.start_point).proj_on(&line.end_point.sub(&line.start_point)));
 
             if distance1 < self.radius || distance2 < self.radius {
                 return true;
             }
-            if distance3 < self.radius {
+            if distance3 < self.radius && closest_point.sub(&line.end_point).mag() < line_len && closest_point.sub(&line.start_point).mag() < line_len {
                 return true;
             }
 
@@ -205,6 +208,23 @@ impl Collidable for Line {
             //Use collision detection already implemented for Circles and Lines
             let circle: &Circle = other.as_any().downcast_ref::<Circle>().unwrap();
             return circle.has_collided(self as &RenderableObject);
+        } else if other.as_any().is::<Line>() {
+            let line2: &Line = other.as_any().downcast_ref::<Line>().unwrap();
+
+            //Parametrize line1 and line2 and solve for t1 and t2...if t1 and t2 are less than 1 and greater than 0 then there is an intersection
+            //Line1: x = x_01 + t_1 * dx_1                Line2: x = x_02 + t_2 * dx_2
+            //       y = y_01 + t_1 * dy_1                       y = y_02 + t_2 * dy_2
+            let line1_displacement = self.end_point.sub(&self.start_point);
+            let line2_displacement = line2.end_point.sub(&line2.start_point);
+
+            //Parallel lines cannot intersect
+            if line1_displacement.y / line1_displacement.x == line2_displacement.y / line2_displacement.x {
+                return false;
+            }
+
+            let t1_solved = (line2_displacement.x*(line2.start_point.y - self.start_point.y) - line2_displacement.y*(line2.start_point.x - self.start_point.x)) / (line2_displacement.x * line1_displacement.y - line1_displacement.x * line2_displacement.y);
+            let t2_solved = (line1_displacement.x*(line2.start_point.y - self.start_point.y) - line1_displacement.y*(line2.start_point.x - self.start_point.x)) / (line2_displacement.x * line1_displacement.y - line1_displacement.x * line2_displacement.y);
+            return  t1_solved < 1.0 && t1_solved > 0.0 && t2_solved < 1.0 && t2_solved > 0.0;
         }
 
         return false;
