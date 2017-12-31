@@ -122,26 +122,25 @@ impl World {
                         let other_m = self.objects[j].get_mass();
 
                         let current_velocity = self.objects[i].get_velocity();
-                        let other_velocity = self.objects[j].get_velocity();
+                        let current_v_parallel = current_velocity.proj_on(&collision_direction);
+                        let current_v_tangent = current_velocity.reject_on(&collision_direction);
 
-                        //Velocity of current object after elastic collision
-                        let current_final_v = current_velocity.mult(current_m)
-                            .add(&other_velocity.mult(other_m))
-                            .sub(&current_velocity.mult(other_m))
-                            .add(&other_velocity.mult(other_m))
+                        let other_velocity = self.objects[j].get_velocity();
+                        let other_v_parallel = other_velocity.proj_on(&collision_direction);
+                        let other_v_tangent = other_velocity.reject_on(&collision_direction);
+
+                        //Velocity part parallel to line of collision experiences elastic collision while tangential part remains constant
+                        let current_final_v_parallel = current_v_parallel.mult(current_m)
+                            .add(&other_v_parallel.mult(other_m))
+                            .sub(&current_v_parallel.mult(other_m))
+                            .add(&other_v_parallel.mult(other_m))
                             .mult(1.0/(current_m + other_m));
 
                         //Velocity of second object after elastic collision
-                        let other_final_v = current_velocity.sub(&other_velocity).add(&current_final_v);
+                        let other_final_v_parallel = current_v_parallel.sub(&other_v_parallel).add(&current_final_v_parallel);
 
-                        //Reflect object at angle of incidence and change its velocity based on elastic collision
-                        let new_incident_v = current_velocity.proj_on(&collision_direction)
-                                                        .mult(-1.0)
-                                                        .add(&current_velocity.reject_on(&collision_direction))
-                                                        .unit().mult(current_final_v.mag());
-
-                        self.objects[i].set_velocity(&new_incident_v);
-                        self.objects[j].set_velocity(&current_velocity.proj_on(&collision_direction).unit().mult(other_final_v.mag()));
+                        self.objects[i].set_velocity(&current_final_v_parallel.add(&current_v_tangent));
+                        self.objects[j].set_velocity(&other_final_v_parallel.add(&other_v_tangent));
                     }
                 } else {
                     if has_collided {
