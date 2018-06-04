@@ -82,6 +82,10 @@ impl Vec2D {
     pub fn reject_on(&self, other: &Vec2D) -> Vec2D {
         self.sub(&self.proj_on(&other))
     }
+
+    pub fn perp(&self) -> Vec2D {
+        Vec2D::new(-1.0 * self.y, self.x)
+    }
 }
 
 impl Clone for Vec2D {

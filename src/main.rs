@@ -42,6 +42,22 @@ fn main() {
 
     let mut group1 = Group::new();
     let mut group2 = Group::new();
+    let mut square = Group::create_polygon(vec![
+        Vec2D::new(300.0, 300.0),
+        Vec2D::new(350.0, 300.0),
+        Vec2D::new(350.0, 350.0),
+        Vec2D::new(300.0, 350.0),
+        Vec2D::new(300.0, 300.0)
+    ], 10.0);
+    let mut hexagon = Group::create_polygon(vec![
+        Vec2D::new(-14.01 + 200.0, 14.27 + 600.0),
+        Vec2D::new(-19.36 + 200.0, -5.0 + 600.0),
+        Vec2D::new(-5.35 + 200.0, -19.27 + 600.0),
+        Vec2D::new(14.01 + 200.0, -14.27 + 600.0),
+        Vec2D::new(19.36 + 200.0, 5.0 + 600.0),
+        Vec2D::new(5.35 + 200.0, 19.27 + 600.0),
+        Vec2D::new(-14.01 + 200.0, 14.27 + 600.0)
+    ], 5.0);
 
     group1.add_object(ball1);
     group1.add_object(ball2);
@@ -55,6 +71,7 @@ fn main() {
     group1.set_velocity(&Vec2D::new(5.0, 3.0));
     group2.set_velocity(&Vec2D::new(-5.0, 3.0));
 
+    world.add_object(square);
     world.add_object(group1);
     world.add_object(wall);
     world.add_object(wall1);
@@ -63,6 +80,7 @@ fn main() {
     world.add_object(wall3);
     world.add_object(wall4);
     world.add_object(group2);
+    world.add_object(hexagon);
 
     while let Some(e) = window.next() {
         let prev_time = Instant::now();

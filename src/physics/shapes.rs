@@ -87,6 +87,18 @@ impl Group {
 
         self.com = com;
     }
+
+    pub fn create_polygon(points: Vec<Vec2D>, mass: f64) -> Group {
+        let mut result = Group::new();
+        for i in 0..(points.len() - 1) {
+            let mut line = Line::new(points[i].clone(), points[i+1].clone());
+            line.set_static(false);
+            line.set_mass(mass / (points.len() as f64));
+            result.add_object(line);
+        }
+
+        return result;
+    }
 }
 
 impl Object for Circle{
@@ -340,6 +352,36 @@ impl Collidable for Line {
             //Use collision detection already implemented for Groups and Lines
             let group: &Group = other.as_any().downcast_ref::<Group>().unwrap();
             return group.collision_direction(self as &RenderableObject);
+        }
+
+        //Using line collision checking code
+        let line2: &Line = other.as_any().downcast_ref::<Line>().unwrap();
+
+        //Parametrize line1 and line2 and solve for t1 and t2...if t1 and t2 are less than 1 and greater than 0 then there is an intersection
+        //Line1: x = x_01 + t_1 * dx_1                Line2: x = x_02 + t_2 * dx_2
+        //       y = y_01 + t_1 * dy_1                       y = y_02 + t_2 * dy_2
+        let line1_displacement = self.end_point.sub(&self.start_point);
+        let line2_displacement = line2.end_point.sub(&line2.start_point);
+
+        //Parallel lines cannot intersect
+        if line1_displacement.y / line1_displacement.x == line2_displacement.y / line2_displacement.x {
+            return None;
+        }
+
+        let t1_solved = (line2_displacement.x*(line2.start_point.y - self.start_point.y) - line2_displacement.y*(line2.start_point.x - self.start_point.x)) / (line2_displacement.x * line1_displacement.y - line1_displacement.x * line2_displacement.y);
+        let t2_solved = (line1_displacement.x*(line2.start_point.y - self.start_point.y) - line1_displacement.y*(line2.start_point.x - self.start_point.x)) / (line2_displacement.x * line1_displacement.y - line1_displacement.x * line2_displacement.y);
+        if t1_solved < 1.0 && t1_solved > 0.0 && t2_solved < 1.0 && t2_solved > 0.0 {
+            //Collision is detected and direction must be created
+
+            //Compare the relative distance(0.0-1.0) between contact point and center of the line
+            //Line with the closer relative distance is the reference line for the collision direction
+            if (t1_solved - 0.5).abs() < (t2_solved - 0.5).abs() {
+                //Use vector normal to line1 as collision direction
+                return Some(line1_displacement.perp());
+            } else {
+                //Use Vector normal to line2 as collision direction
+                return Some(line2_displacement.perp());
+            }
         }
 
         return None;
