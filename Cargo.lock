@@ -1,4 +1,4 @@
-[root]
+[[package]]
 name = "Physics2D"
 version = "0.1.0"
 dependencies = [

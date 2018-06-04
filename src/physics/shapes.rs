@@ -26,6 +26,15 @@ pub struct Line {
     pub is_static: bool
 }
 
+pub struct Group {
+    pub objects: Vec<Box<RenderableObject>>,
+    pub com: Vec2D,
+    pub mass: f64,
+    pub velocity: Vec2D,
+    pub friction: f64,
+    pub is_static: bool
+}
+
 impl Circle {
     pub fn new(mass: f64, center: Vec2D, radius: f64) -> Circle{
         Circle{ mass,
@@ -50,6 +59,33 @@ impl Line {
             friction: 0.0,
             is_static: true,
         }
+    }
+}
+
+impl Group {
+    pub fn new() -> Group {
+        Group {
+            objects: Vec::new(),
+            com: Vec2D::new(0.0, 0.0),
+            mass: 0.0,
+            velocity: Vec2D::new(0.0, 0.0),
+            friction: 0.0,
+            is_static: false,
+        }
+    }
+
+    pub fn add_object(&mut self, object: impl RenderableObject + 'static) {
+        self.mass += object.get_mass();
+        self.objects.push(Box::new(object));
+
+        //Recalculate COM
+        let mut com = Vec2D::new(0.0, 0.0);
+        for object in self.objects.iter() {
+            com.add(&object.get_com().mult(object.get_mass()));
+        }
+        com = com.mult(1.0/self.mass);
+
+        self.com = com;
     }
 }
 
@@ -148,6 +184,59 @@ impl Object for Line {
     }
 }
 
+impl Object for Group {
+    fn get_com(&self) -> Vec2D {
+        self.com.clone()
+    }
+
+    fn set_com(&mut self, com: &Vec2D) {
+        let displacement = com.sub(&self.com);
+        //Shift all objects in group by the displacement
+        for object in self.objects.iter_mut() {
+            let obj_current_pos = object.get_com();
+            object.set_com(&obj_current_pos.add(&displacement));
+        }
+
+        self.com = com.clone();
+    }
+
+    fn get_mass(&self) -> f64 {
+        self.mass
+    }
+
+    fn set_mass(&mut self, mass: f64) {
+        //Do nothing ... mass should only changes when adding new objects
+    }
+
+    fn get_velocity(&self) -> Vec2D {
+        self.velocity.clone()
+    }
+
+    fn set_velocity(&mut self, velocity: &Vec2D) {
+        self.velocity = velocity.clone();
+    }
+
+    fn get_friction(&self) -> f64 {
+        self.friction
+    }
+
+    fn set_friction(&mut self, friction_k: f64) {
+        self.friction = friction_k;
+    }
+
+    fn get_static(&self) -> bool {
+        self.is_static
+    }
+
+    fn set_static(&mut self, is_static: bool) {
+        self.is_static = is_static;
+    }
+
+    fn as_any(&self) -> &Any {
+        self
+    }
+}
+
 impl Collidable for Circle {
     fn has_collided(&self, other: &RenderableObject) -> bool {
         if other.as_any().is::<Circle>() {
@@ -175,6 +264,10 @@ impl Collidable for Circle {
             }
 
             return false
+        } else if other.as_any().is::<Group>() {
+            //Use collision detection already implemented for Groups and Circles
+            let group: &Group = other.as_any().downcast_ref::<Group>().unwrap();
+            return group.has_collided(self as &RenderableObject);
         }
 
         return false;
@@ -196,6 +289,10 @@ impl Collidable for Circle {
                 line.end_point.sub(&line.start_point)
                     .reject_on(&line.end_point.sub(&self.center))
             );
+        } else if other.as_any().is::<Group>() {
+            //Use collision detection already implemented for Groups and Circles
+            let group: &Group = other.as_any().downcast_ref::<Group>().unwrap();
+            return group.collision_direction(self as &RenderableObject);
         }
 
         return None;
@@ -225,6 +322,10 @@ impl Collidable for Line {
             let t1_solved = (line2_displacement.x*(line2.start_point.y - self.start_point.y) - line2_displacement.y*(line2.start_point.x - self.start_point.x)) / (line2_displacement.x * line1_displacement.y - line1_displacement.x * line2_displacement.y);
             let t2_solved = (line1_displacement.x*(line2.start_point.y - self.start_point.y) - line1_displacement.y*(line2.start_point.x - self.start_point.x)) / (line2_displacement.x * line1_displacement.y - line1_displacement.x * line2_displacement.y);
             return  t1_solved < 1.0 && t1_solved > 0.0 && t2_solved < 1.0 && t2_solved > 0.0;
+        } else if other.as_any().is::<Group>() {
+            //Use collision detection already implemented for Groups and Lines
+            let group: &Group = other.as_any().downcast_ref::<Group>().unwrap();
+            return group.has_collided(self as &RenderableObject);
         }
 
         return false;
@@ -235,6 +336,52 @@ impl Collidable for Line {
             //Use collision detection already implemented for Circles and Lines
             let circle: &Circle = other.as_any().downcast_ref::<Circle>().unwrap();
             return circle.collision_direction(self as &RenderableObject);
+        } else if other.as_any().is::<Group>() {
+            //Use collision detection already implemented for Groups and Lines
+            let group: &Group = other.as_any().downcast_ref::<Group>().unwrap();
+            return group.collision_direction(self as &RenderableObject);
+        }
+
+        return None;
+    }
+}
+
+impl Collidable for Group {
+    fn has_collided(&self, other: &RenderableObject) -> bool {
+        if other.as_any().is::<Group>() {
+            for object in self.objects.iter() {
+                for other in other.as_any().downcast_ref::<Group>().unwrap().objects.iter() {
+                    if object.has_collided(&**other) {
+                        return true;
+                    }
+                }
+            }
+        } else {
+            for object in self.objects.iter() {
+                if object.has_collided(other) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    fn collision_direction(&self, other: &RenderableObject) -> Option<Vec2D> {
+        if other.as_any().is::<Group>() {
+            for object in self.objects.iter() {
+                for other in other.as_any().downcast_ref::<Group>().unwrap().objects.iter() {
+                    if let Some(d) = object.collision_direction(&**other) {
+                        return Some(d);
+                    }
+                }
+            }
+        } else {
+            for object in self.objects.iter() {
+                if let Some(d) = object.collision_direction(other) {
+                    return Some(d);
+                }
+            }
         }
 
         return None;

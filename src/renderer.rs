@@ -2,6 +2,7 @@ use piston_window::*;
 
 use physics::shapes::Circle;
 use physics::shapes::Line;
+use physics::shapes::Group;
 use physics::World;
 use physics::Object;
 use physics::Collidable;
@@ -30,8 +31,17 @@ impl Renderable for Line {
     }
 }
 
+impl Renderable for Group {
+    fn render(&self, context: &Context, graphics: &mut G2d) {
+        for obj in self.objects.iter() {
+            obj.render(context, graphics);
+        }
+    }
+}
+
 impl RenderableObject for Circle {}
 impl RenderableObject for Line {}
+impl RenderableObject for Group {}
 
 impl Renderable for World {
     fn render(&self, context: &Context, graphics: &mut G2d) {
