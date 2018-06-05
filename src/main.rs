@@ -36,7 +36,7 @@ fn main() {
     group1.add_object(ball2);
     group1.add_object(ball3);
 
-    for i in 0..10 {
+    for i in 0..2 {
         let mut rng = rand::thread_rng();
 
         let rand_x = rng.gen_range::<f64>(-10.0, 10.0);

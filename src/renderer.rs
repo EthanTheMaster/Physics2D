@@ -60,6 +60,16 @@ impl Renderable for Circle {
         graphics.ellipse(&Ellipse::new(self.color),
                          [center.x - radius_x, center.y - radius_y, 2.0*radius_x, 2.0*radius_y],
                             &context.draw_state, context.transform);
+
+        let com = camera.screen(&self.get_com());
+        graphics.ellipse(&Ellipse::new([1.0,0.0,0.0,1.0]),
+                         [com.x - 2.5, com.y - 2.5, 5.0, 5.0],
+                         &context.draw_state, context.transform);
+        let pivot = camera.screen(&self.pivot.position);
+        graphics.ellipse(&Ellipse::new([0.0,1.0,0.0,1.0]),
+                         [pivot.x - 2.5, pivot.y - 2.5, 5.0, 5.0],
+                         &context.draw_state, context.transform);
+
     }
 }
 
@@ -70,6 +80,15 @@ impl Renderable for Line {
         graphics.line(&GLine::new(self.color, 1.0),
                         [start_point.x, start_point.y, end_point.x, end_point.y],
                             &context.draw_state, context.transform);
+
+        let com = camera.screen(&self.get_com());
+        graphics.ellipse(&Ellipse::new([1.0,0.0,0.0,1.0]),
+                         [com.x - 2.5, com.y - 2.5, 5.0, 5.0],
+                         &context.draw_state, context.transform);
+        let pivot = camera.screen(&self.pivot.position);
+        graphics.ellipse(&Ellipse::new([0.0,1.0,0.0,1.0]),
+                         [pivot.x - 2.5, pivot.y - 2.5, 5.0, 5.0],
+                         &context.draw_state, context.transform);
     }
 }
 
@@ -78,6 +97,15 @@ impl Renderable for Group {
         for obj in self.objects.iter() {
             obj.render(context, graphics, camera);
         }
+
+        let com = camera.screen(&self.get_com());
+        graphics.ellipse(&Ellipse::new([1.0,0.0,0.0,1.0]),
+                         [com.x - 2.5, com.y - 2.5, 5.0, 5.0],
+                         &context.draw_state, context.transform);
+        let pivot = camera.screen(&self.pivot.position);
+        graphics.ellipse(&Ellipse::new([0.0,1.0,0.0,1.0]),
+                         [pivot.x - 2.5, pivot.y - 2.5, 5.0, 5.0],
+                         &context.draw_state, context.transform);
     }
 }
 
@@ -87,7 +115,7 @@ impl RenderableObject for Group {}
 
 impl Renderable for World {
     fn render(&self, context: &Context, graphics: &mut G2d, camera: &Camera) {
-        for obj in self.objects.iter() {
+        for obj in self.objects.values() {
             obj.render(context, graphics, camera);
         }
     }
