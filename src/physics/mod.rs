@@ -216,10 +216,12 @@ impl World {
                         let current_pivot = self.objects.get(i).unwrap().get_pivot().position;
                         let current_r = contact_point.sub(&current_pivot);
                         let current_ang_velocity = self.objects.get(i).unwrap().get_ang_velocity();
+                        let current_i_pivot = self.objects.get(i).unwrap().get_i_com() + current_m * current_pivot.sub(&self.objects.get(i).unwrap().get_com()).mag().powi(2);
 
                         let other_pivot = self.objects.get(j).unwrap().get_pivot().position;
                         let other_r = contact_point.sub(&other_pivot);
                         let other_ang_velocity = self.objects.get(j).unwrap().get_ang_velocity();
+                        let other_i_pivot = self.objects.get(j).unwrap().get_i_com() + other_m * other_pivot.sub(&self.objects.get(j).unwrap().get_com()).mag().powi(2);
 
                         //Variables for linear motion
                         let current_velocity = self.objects.get(i).unwrap().get_velocity()
@@ -246,15 +248,20 @@ impl World {
                         let other_final_linear_v = other_final_v_parallel.add(&other_v_tangent);
 
                         //Apply impulse at contact point for rotation
-                        self.objects.get_mut(i).unwrap().apply_impulse(&other_velocity.sub(&other_final_linear_v),
+                        self.objects.get_mut(i).unwrap().apply_impulse(&current_final_v_parallel.sub(&current_v_parallel).mult(current_m),
                             &contact_point, &current_pivot
                         );
-                        self.objects.get_mut(j).unwrap().apply_impulse(&current_velocity.sub(&current_final_linear_v),
+                        self.objects.get_mut(j).unwrap().apply_impulse(&other_final_v_parallel.sub(&other_v_parallel).mult(other_m),
                                                                        &contact_point, &other_pivot
                         );
 
-                        self.objects.get_mut(i).unwrap().set_velocity(&current_final_linear_v);
-                        self.objects.get_mut(j).unwrap().set_velocity(&other_final_linear_v);
+                        //Objects will spin in place if their pivots are not dynamic
+                        if self.objects.get(i).unwrap().get_pivot().is_dynamic {
+                            self.objects.get_mut(i).unwrap().set_velocity(&current_final_v_parallel.add(&current_v_tangent));
+                        }
+                        if self.objects.get(j).unwrap().get_pivot().is_dynamic {
+                            self.objects.get_mut(j).unwrap().set_velocity(&other_final_v_parallel.add(&other_v_tangent));
+                        }
                     }
                 } else {
                     if has_collided {
@@ -270,7 +277,8 @@ impl World {
                             self.objects.get_mut(i).unwrap().set_velocity(&new_velocity);
 
                             let pivot = self.objects.get_mut(i).unwrap().get_pivot().position;
-                            self.objects.get_mut(i).unwrap().apply_impulse(&new_velocity.sub(&current_velocity),
+                            let current_mass = self.objects.get(j).unwrap().get_mass();
+                            self.objects.get_mut(i).unwrap().apply_impulse(&new_velocity.sub(&current_velocity).mult(current_mass),
                                                                            &contact_point,
                                                                            &pivot
                             );
@@ -286,7 +294,8 @@ impl World {
                             self.objects.get_mut(j).unwrap().set_velocity(&new_velocity);
 
                             let pivot = self.objects.get_mut(j).unwrap().get_pivot().position;
-                            self.objects.get_mut(j).unwrap().apply_impulse(&new_velocity.sub(&current_velocity),
+                            let current_mass = self.objects.get(j).unwrap().get_mass();
+                            self.objects.get_mut(j).unwrap().apply_impulse(&new_velocity.sub(&current_velocity).mult(current_mass),
                                                                            &contact_point,
                                                                            &pivot
                             );

@@ -35,8 +35,23 @@ fn main() {
     group1.add_object(ball1);
     group1.add_object(ball2);
     group1.add_object(ball3);
+    group1.set_velocity(&Vec2D::new(0.1, 0.2));
 
-    for i in 0..2 {
+    let ball4 = Circle::new(2.0, Vec2D::new(1.0, 1.0), 0.4);
+    let mut line = Line::new(Vec2D::new(1.0, 1.0), Vec2D::new(1.0, -5.0));
+    line.set_mass(7.0);
+    line.set_static(false);
+
+    let mut group2 = Group::new();
+    group2.add_object(ball4);
+    group2.add_object(line);
+
+//    let mut new_joint = group2.get_pivot();
+//    new_joint.position = Vec2D::new(-2.0, 0.0);
+//    new_joint.is_dynamic = false;
+//    group2.set_pivot(new_joint);
+
+    for i in 0..5 {
         let mut rng = rand::thread_rng();
 
         let rand_x = rng.gen_range::<f64>(-10.0, 10.0);
@@ -44,19 +59,26 @@ fn main() {
         let rand_rot = rng.gen_range::<f64>(0.0, 6.2831852);
         let rand_mass = rng.gen_range::<f64>(1.0, 7.0);
         let r = rng.gen_range::<f64>(1.0, 1.5);
-        let n = rng.gen_range::<i32>(4, 8);
+        let n = rng.gen_range::<i32>(3, 5);
 
         let rand_vx = rng.gen_range::<f64>(-0.1, 0.1);
         let rand_vy = rng.gen_range::<f64>(-0.1, 0.1);
 
         let mut points_polygon: Vec<Vec2D> = Vec::new();
+//        let mut polygon = Group::new();
         for i in 0..(n+1) {
             let x: f64 = rand_x + r * (rand_rot + i as f64 * 6.2831852 / n as f64).cos();
             let y: f64 = rand_y +r * (rand_rot + i as f64* 6.2831852 / n as f64).sin();
             points_polygon.push(Vec2D::new(x, y));
+//            polygon.add_object(Circle::new(rand_mass, Vec2D::new(x, y), 0.3));
         }
-        let mut polygon = Group::create_polygon(points_polygon, rand_mass);
-        polygon.set_velocity(&Vec2D::new(rand_vx, rand_vy));
+        let mut polygon = Group::create_polygon(points_polygon, 4.0);
+//        polygon.set_velocity(&Vec2D::new(rand_vx, rand_vy));
+
+        let mut new_joint = polygon.get_pivot();
+        new_joint.is_dynamic = rng.gen_weighted_bool(2);
+
+        polygon.set_pivot(new_joint);
         world.add_object(polygon);
     }
 
@@ -65,6 +87,7 @@ fn main() {
     world.add_object(wall2);
     world.add_object(wall3);
     world.add_object(wall4);
+//    world.add_object(group2);
 
     while let Some(e) = window.next() {
         let prev_time = Instant::now();
