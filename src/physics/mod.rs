@@ -247,6 +247,12 @@ impl World {
                         let current_final_linear_v = current_final_v_parallel.add(&current_v_tangent);
                         let other_final_linear_v = other_final_v_parallel.add(&other_v_tangent);
 
+                        //Find Initial Energy
+                        let current_initial_trans = 0.5 * current_m * current_velocity.mag().powi(2);
+                        let current_initial_rot = 0.5 * current_i_pivot * current_ang_velocity.powi(2);
+                        let other_initial_trans = 0.5 * other_m * other_velocity.mag().powi(2);
+                        let other_initial_rot = 0.5 * other_i_pivot * other_ang_velocity.powi(2);
+
                         //Apply impulse at contact point for rotation
                         self.objects.get_mut(i).unwrap().apply_impulse(&current_final_linear_v.sub(&current_velocity).mult(0.05 * current_m),
                             &contact_point, &current_pivot
@@ -256,21 +262,29 @@ impl World {
                         );
 
                         //Objects will spin in place if their pivots are not dynamic
-                        //Pivot is dynamically set to the contact point so objects will momentarily pivot around the contact point
                         if self.objects.get(i).unwrap().get_pivot().is_dynamic {
-                            let mut new_pivot = self.objects.get(i).unwrap().get_pivot();
-                            new_pivot.position = contact_point.clone();
-
-                            self.objects.get_mut(i).unwrap().set_pivot(new_pivot);
                             self.objects.get_mut(i).unwrap().set_velocity(&current_final_linear_v);
                         }
                         if self.objects.get(j).unwrap().get_pivot().is_dynamic {
-                            let mut new_pivot = self.objects.get(j).unwrap().get_pivot();
-                            new_pivot.position = contact_point.clone();
-
-                            self.objects.get_mut(j).unwrap().set_pivot(new_pivot);
                             self.objects.get_mut(j).unwrap().set_velocity(&other_final_linear_v);
                         }
+
+                        //Find Final Energy
+                        let current_final_speed = self.objects.get(i).unwrap().get_velocity();
+                        let current_final_ang_velocity = self.objects.get(i).unwrap().get_ang_velocity();
+                        let current_final_trans = 0.5 * current_m * current_final_speed.mag().powi(2);
+                        let current_final_rot = 0.5 * current_i_pivot * current_final_ang_velocity.powi(2);
+
+                        let other_final_speed = self.objects.get(j).unwrap().get_velocity();
+                        let other_final_ang_velocity = self.objects.get(j).unwrap().get_ang_velocity();
+                        let other_final_trans = 0.5 * other_m * other_final_speed.mag().powi(2);
+                        let other_final_rot = 0.5 * other_i_pivot * other_final_ang_velocity.powi(2);
+
+                        //KE0 + RE0 = damping * KEf + REf
+                        let velocity_dampen_factor = (current_initial_trans + current_initial_rot + other_initial_trans + other_initial_rot - current_final_rot - other_final_rot) / (current_final_trans + other_final_trans);
+                        self.objects.get_mut(i).unwrap().set_velocity(&current_final_speed.mult(velocity_dampen_factor.powf(0.5)));
+                        self.objects.get_mut(j).unwrap().set_velocity(&other_final_speed.mult(velocity_dampen_factor.powf(0.5)));
+
                     }
                 } else {
                     if has_collided {
@@ -279,6 +293,7 @@ impl World {
                         if self.objects.get(i).unwrap().get_static() {
                             self.objects.get_mut(i).unwrap().set_velocity(&Vec2D::new(0.0, 0.0));
                         } else {
+                            //Reflect object off static object
                             let current_velocity = self.objects.get(i).unwrap().get_velocity();
                             let new_velocity = current_velocity.proj_on(&collision_direction)
                                                         .mult(-1.0)
@@ -287,18 +302,26 @@ impl World {
 
                             let pivot = self.objects.get_mut(i).unwrap().get_pivot().position;
                             let current_mass = self.objects.get(j).unwrap().get_mass();
+                            let current_i_pivot = self.objects.get(i).unwrap().get_i_com() + current_mass * pivot.sub(&self.objects.get(i).unwrap().get_com()).mag().powi(2);
+                            let current_ang_velocity = self.objects.get(i).unwrap().get_ang_velocity();
+
+                            //Find Initial Energy
+                            let current_initial_trans = 0.5 * current_mass * current_velocity.mag().powi(2);
+                            let current_initial_rot = 0.5 * current_i_pivot * current_ang_velocity.powi(2);
+
                             self.objects.get_mut(i).unwrap().apply_impulse(&new_velocity.sub(&current_velocity).mult(0.05 * current_mass),
                                                                            &contact_point,
                                                                            &pivot
                             );
 
-                            //Pivot is dynamically set to the contact point so objects will momentarily pivot around the contact point
-                            if self.objects.get(i).unwrap().get_pivot().is_dynamic {
-                                let mut new_pivot = self.objects.get(i).unwrap().get_pivot();
-                                new_pivot.position = contact_point.clone();
+                            //Find Final Energy
+                            let current_final_ang_velocity = self.objects.get(i).unwrap().get_ang_velocity();
+                            let current_final_trans = 0.5 * current_mass * new_velocity.mag().powi(2);
+                            let current_final_rot = 0.5 * current_i_pivot * current_final_ang_velocity.powi(2);
 
-                                self.objects.get_mut(i).unwrap().set_pivot(new_pivot);
-                            }
+                            //KE0 + RE0 = damping * KEf + REf
+                            let velocity_dampen_factor = (current_initial_trans + current_initial_rot - current_final_rot) / current_final_trans;
+                            self.objects.get_mut(i).unwrap().set_velocity(&new_velocity.mult(velocity_dampen_factor.powf(0.5)));
                         }
 
                         if self.objects.get(j).unwrap().get_static() {
@@ -312,18 +335,26 @@ impl World {
 
                             let pivot = self.objects.get_mut(j).unwrap().get_pivot().position;
                             let current_mass = self.objects.get(j).unwrap().get_mass();
+                            let current_i_pivot = self.objects.get(j).unwrap().get_i_com() + current_mass * pivot.sub(&self.objects.get(j).unwrap().get_com()).mag().powi(2);
+                            let current_ang_velocity = self.objects.get(j).unwrap().get_ang_velocity();
+
+                            //Find Initial Energy
+                            let current_initial_trans = 0.5 * current_mass * current_velocity.mag().powi(2);
+                            let current_initial_rot = 0.5 * current_i_pivot * current_ang_velocity.powi(2);
+
                             self.objects.get_mut(j).unwrap().apply_impulse(&new_velocity.sub(&current_velocity).mult(0.05 * current_mass),
                                                                            &contact_point,
                                                                            &pivot
                             );
 
-                            //Pivot is dynamically set to the contact point so objects will momentarily pivot around the contact point
-                            if self.objects.get(j).unwrap().get_pivot().is_dynamic {
-                                let mut new_pivot = self.objects.get(j).unwrap().get_pivot();
-                                new_pivot.position = contact_point.clone();
+                            //Find Final Energy
+                            let current_final_ang_velocity = self.objects.get(j).unwrap().get_ang_velocity();
+                            let current_final_trans = 0.5 * current_mass * new_velocity.mag().powi(2);
+                            let current_final_rot = 0.5 * current_i_pivot * current_final_ang_velocity.powi(2);
 
-                                self.objects.get_mut(j).unwrap().set_pivot(new_pivot);
-                            }
+                            //KE0 + RE0 = damping * KEf + REf
+                            let velocity_dampen_factor = (current_initial_trans + current_initial_rot - current_final_rot) / current_final_trans;
+                            self.objects.get_mut(j).unwrap().set_velocity(&new_velocity.mult(velocity_dampen_factor.powf(0.5)));
                         }
                     }
                 }
@@ -354,14 +385,6 @@ impl World {
 
             obj.set_com(&com.add(&velocity.mult(self.timestep)));
             obj.rotate(ang_velocity * self.timestep, pivot);
-
-            //The pivot is dynamically put back to the center of mass after having been positioned at the collision point
-            if obj.get_pivot().is_dynamic {
-                let mut new_pivot = obj.get_pivot();
-                new_pivot.position = obj.get_com();
-
-                obj.set_pivot(new_pivot);
-            }
         }
     }
 }
