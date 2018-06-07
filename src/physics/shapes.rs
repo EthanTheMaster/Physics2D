@@ -160,7 +160,7 @@ impl Object for Circle{
         self.center = com.clone();
 
         if self.pivot.is_dynamic {
-            self.pivot.position = self.get_com();
+            self.pivot.position = self.pivot.position.add(&translation);
         }
     }
 
@@ -268,7 +268,7 @@ impl Object for Line {
         self.end_point = self.end_point.add(&translation_vec);
 
         if self.pivot.is_dynamic {
-            self.pivot.position = self.get_com();
+            self.pivot.position = self.pivot.position.add(&translation_vec);
         }
     }
 
@@ -382,7 +382,7 @@ impl Object for Group {
         self.com = com.clone();
 
         if self.pivot.is_dynamic {
-            self.pivot.position = self.get_com();
+            self.pivot.position = self.pivot.position.add(&displacement);
         }
     }
 

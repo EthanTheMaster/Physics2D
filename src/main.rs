@@ -20,7 +20,7 @@ use std::time::Instant;
 
 fn main() {
     let mut window: PistonWindow = WindowSettings::new("Hello World", [800,800]).exit_on_esc(true).build().unwrap();
-    let mut world = World::new(0.0, 1.0);
+    let mut world = World::new(0.0, 0.5);
 
     let mut wall1 = Line::new(Vec2D::new(-15.0, 15.0), Vec2D::new(15.0, 15.0));
     let mut wall2 = Line::new(Vec2D::new(15.0, 15.0), Vec2D::new(15.0, -15.0));
@@ -46,10 +46,9 @@ fn main() {
     group2.add_object(ball4);
     group2.add_object(line);
 
-//    let mut new_joint = group2.get_pivot();
-//    new_joint.position = Vec2D::new(-2.0, 0.0);
-//    new_joint.is_dynamic = false;
-//    group2.set_pivot(new_joint);
+    let mut new_joint = group2.get_pivot();
+    new_joint.is_dynamic = false;
+    group2.set_pivot(new_joint);
 
     for i in 0..5 {
         let mut rng = rand::thread_rng();
@@ -65,20 +64,20 @@ fn main() {
         let rand_vy = rng.gen_range::<f64>(-0.1, 0.1);
 
         let mut points_polygon: Vec<Vec2D> = Vec::new();
-//        let mut polygon = Group::new();
+        let mut polygon = Group::new();
         for i in 0..(n+1) {
             let x: f64 = rand_x + r * (rand_rot + i as f64 * 6.2831852 / n as f64).cos();
             let y: f64 = rand_y +r * (rand_rot + i as f64* 6.2831852 / n as f64).sin();
-            points_polygon.push(Vec2D::new(x, y));
-//            polygon.add_object(Circle::new(rand_mass, Vec2D::new(x, y), 0.3));
+//            points_polygon.push(Vec2D::new(x, y));
+            polygon.add_object(Circle::new(rand_mass, Vec2D::new(x, y), 0.3));
         }
-        let mut polygon = Group::create_polygon(points_polygon, 4.0);
-//        polygon.set_velocity(&Vec2D::new(rand_vx, rand_vy));
+//        let mut polygon = Group::create_polygon(points_polygon, 4.0);
+        polygon.set_velocity(&Vec2D::new(rand_vx, rand_vy));
 
         let mut new_joint = polygon.get_pivot();
         new_joint.is_dynamic = rng.gen_weighted_bool(2);
 
-        polygon.set_pivot(new_joint);
+//        polygon.set_pivot(new_joint);
         world.add_object(polygon);
     }
 

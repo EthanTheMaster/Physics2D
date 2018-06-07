@@ -248,19 +248,28 @@ impl World {
                         let other_final_linear_v = other_final_v_parallel.add(&other_v_tangent);
 
                         //Apply impulse at contact point for rotation
-                        self.objects.get_mut(i).unwrap().apply_impulse(&current_final_v_parallel.sub(&current_v_parallel).mult(current_m),
+                        self.objects.get_mut(i).unwrap().apply_impulse(&current_final_linear_v.sub(&current_velocity).mult(0.05 * current_m),
                             &contact_point, &current_pivot
                         );
-                        self.objects.get_mut(j).unwrap().apply_impulse(&other_final_v_parallel.sub(&other_v_parallel).mult(other_m),
+                        self.objects.get_mut(j).unwrap().apply_impulse(&other_final_linear_v.sub(&other_velocity).mult(0.05 * other_m),
                                                                        &contact_point, &other_pivot
                         );
 
                         //Objects will spin in place if their pivots are not dynamic
+                        //Pivot is dynamically set to the contact point so objects will momentarily pivot around the contact point
                         if self.objects.get(i).unwrap().get_pivot().is_dynamic {
-                            self.objects.get_mut(i).unwrap().set_velocity(&current_final_v_parallel.add(&current_v_tangent));
+                            let mut new_pivot = self.objects.get(i).unwrap().get_pivot();
+                            new_pivot.position = contact_point.clone();
+
+                            self.objects.get_mut(i).unwrap().set_pivot(new_pivot);
+                            self.objects.get_mut(i).unwrap().set_velocity(&current_final_linear_v);
                         }
                         if self.objects.get(j).unwrap().get_pivot().is_dynamic {
-                            self.objects.get_mut(j).unwrap().set_velocity(&other_final_v_parallel.add(&other_v_tangent));
+                            let mut new_pivot = self.objects.get(j).unwrap().get_pivot();
+                            new_pivot.position = contact_point.clone();
+
+                            self.objects.get_mut(j).unwrap().set_pivot(new_pivot);
+                            self.objects.get_mut(j).unwrap().set_velocity(&other_final_linear_v);
                         }
                     }
                 } else {
@@ -278,10 +287,18 @@ impl World {
 
                             let pivot = self.objects.get_mut(i).unwrap().get_pivot().position;
                             let current_mass = self.objects.get(j).unwrap().get_mass();
-                            self.objects.get_mut(i).unwrap().apply_impulse(&new_velocity.sub(&current_velocity).mult(current_mass),
+                            self.objects.get_mut(i).unwrap().apply_impulse(&new_velocity.sub(&current_velocity).mult(0.05 * current_mass),
                                                                            &contact_point,
                                                                            &pivot
                             );
+
+                            //Pivot is dynamically set to the contact point so objects will momentarily pivot around the contact point
+                            if self.objects.get(i).unwrap().get_pivot().is_dynamic {
+                                let mut new_pivot = self.objects.get(i).unwrap().get_pivot();
+                                new_pivot.position = contact_point.clone();
+
+                                self.objects.get_mut(i).unwrap().set_pivot(new_pivot);
+                            }
                         }
 
                         if self.objects.get(j).unwrap().get_static() {
@@ -295,10 +312,18 @@ impl World {
 
                             let pivot = self.objects.get_mut(j).unwrap().get_pivot().position;
                             let current_mass = self.objects.get(j).unwrap().get_mass();
-                            self.objects.get_mut(j).unwrap().apply_impulse(&new_velocity.sub(&current_velocity).mult(current_mass),
+                            self.objects.get_mut(j).unwrap().apply_impulse(&new_velocity.sub(&current_velocity).mult(0.05 * current_mass),
                                                                            &contact_point,
                                                                            &pivot
                             );
+
+                            //Pivot is dynamically set to the contact point so objects will momentarily pivot around the contact point
+                            if self.objects.get(j).unwrap().get_pivot().is_dynamic {
+                                let mut new_pivot = self.objects.get(j).unwrap().get_pivot();
+                                new_pivot.position = contact_point.clone();
+
+                                self.objects.get_mut(j).unwrap().set_pivot(new_pivot);
+                            }
                         }
                     }
                 }
@@ -328,7 +353,15 @@ impl World {
             let pivot = obj.get_pivot().position;
 
             obj.set_com(&com.add(&velocity.mult(self.timestep)));
-            obj.rotate(ang_velocity* self.timestep, pivot);
+            obj.rotate(ang_velocity * self.timestep, pivot);
+
+            //The pivot is dynamically put back to the center of mass after having been positioned at the collision point
+            if obj.get_pivot().is_dynamic {
+                let mut new_pivot = obj.get_pivot();
+                new_pivot.position = obj.get_com();
+
+                obj.set_pivot(new_pivot);
+            }
         }
     }
 }
